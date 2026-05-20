@@ -4,7 +4,7 @@ Small FastAPI project for the Edrevel AI SDE Intern assessment.
 
 The app takes an installation-style video, runs YOLO on sampled frames, tracks objects/people with a simple centroid + IoU tracker, and tries to estimate when a person is interacting with an object. It also exports a few annotated keyframes for the most interesting moments.
 
-I tried to keep this as something I could reasonably build and explain in 1-2 days, so the ML part is intentionally practical instead of fancy.
+I tried to keep this as something I could reasonably build and explain in 1-2 days, so the ML part is intentionally practical.
 
 ## What it does
 
@@ -64,7 +64,7 @@ It is not production-grade tracking, but it is readable and good enough for show
 
 ## Interaction heuristic
 
-I skipped hand-pose estimation on purpose. It would be more accurate, but it adds another model and more setup work. For a short assessment project, I used a practical approximation:
+I skipped hand-pose estimation on purpose. It would be more accurate, but it adds another model and more setup work. For a assessment project, I used a practical approximation:
 
 - take the upper part of the person box
 - expand it a bit to represent likely arm/hand area
@@ -167,14 +167,6 @@ See `sample_result.json` for a fuller example.
 - JSON persistence is fine for a local assessment, but not ideal for many users at once.
 - Some thresholds are hardcoded because they are easier to tune while watching real videos.
 
-## Future improvements
-
-- Add a hand pose model for better contact detection.
-- Try ByteTrack or DeepSORT for more stable identities.
-- Fine-tune labels for tools, cables, brackets, panels, and other installation objects.
-- Batch YOLO inference for speed.
-- Add optional GPU setup notes.
-- Save pair confidence timelines for debugging.
 
 ## Notes
 
