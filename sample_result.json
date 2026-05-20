@@ -1,0 +1,43 @@
+{
+  "videoMetadata": {
+    "filename": "sample_install.mp4",
+    "duration_seconds": 16.8,
+    "fps": 30.0,
+    "frame_count": 504,
+    "resolution": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "objectsDetected": [
+    {
+      "object_id": 1,
+      "class": "drill",
+      "motion_history": [
+        {
+          "frame_range": [0, 70],
+          "state": "stationary"
+        },
+        {
+          "frame_range": [75, 155],
+          "state": "moving"
+        }
+      ],
+      "interactions": [
+        {
+          "interacted_by_person": 0,
+          "frame_start": 80,
+          "frame_end": 160,
+          "confidence_peak": 0.84
+        }
+      ]
+    }
+  ],
+  "keyFrames": [
+    {
+      "frame": 95,
+      "path": "outputs/example-task/keyframes/frame_95_interaction_peak.jpg",
+      "reason": "interaction_peak"
+    }
+  ]
+}
