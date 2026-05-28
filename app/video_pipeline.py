@@ -1,4 +1,5 @@
 import json
+import cv2
 from functools import cache
 from pathlib import Path
 
