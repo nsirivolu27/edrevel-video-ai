@@ -1,5 +1,4 @@
 import json
-import cv2
 from functools import cache
 from pathlib import Path
 
@@ -151,6 +150,7 @@ def _moving_transitions(
 
 
 def _save_keyframe(frame, frame_num, reason, objects, people, keyframe_dir, saved) -> None:
+    import cv2
     if len(saved) >= MAX_KEYFRAMES or any(k["frame"] == frame_num and k["reason"] == reason for k in saved):
         return
 
