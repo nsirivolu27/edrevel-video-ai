@@ -75,8 +75,11 @@ def probe_video(path: str) -> VideoInfo:
     if not cap.isOpened():
         raise ValueError(f"could not open video: {path}")
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 0
-    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or not math.isfinite(fps) or fps <= 0:
+        fps = 30.0
+    frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    frames = int(frames) if frames and math.isfinite(frames) and frames > 0 else 0
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
     cap.release()
