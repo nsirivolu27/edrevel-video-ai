@@ -6,7 +6,7 @@ from app import database
 from app.interaction_logic import InteractionScorer
 from app.models import TaskStatus
 from app.tracking import CentroidTracker, Track, classify_motion
-from app.utils import Detection, bbox_center, draw_tracks, probe_video
+from app.utils import Detection, bbox_center, detect_installation_objects, draw_tracks, probe_video
 
 UPLOAD_DIR = Path("uploads")
 OUTPUT_DIR = Path("outputs")
@@ -76,6 +76,8 @@ def detect_frame(frame, frame_num: int) -> tuple[list[Detection], list[Detection
             people.append(det)
         else:
             objects.append(det)
+
+    objects.extend(detect_installation_objects(frame, frame_num, existing=people + objects))
     return people, objects
 
 

@@ -31,6 +31,24 @@
           "confidence_peak": 0.84
         }
       ]
+    },
+    {
+      "object_id": 2,
+      "class": "cable",
+      "motion_history": [
+        {
+          "frame_range": [90, 160],
+          "state": "moving"
+        }
+      ],
+      "interactions": [
+        {
+          "interacted_by_person": 0,
+          "frame_start": 95,
+          "frame_end": 155,
+          "confidence_peak": 0.72
+        }
+      ]
     }
   ],
   "keyFrames": [

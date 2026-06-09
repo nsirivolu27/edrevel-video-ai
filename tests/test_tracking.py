@@ -1,11 +1,36 @@
 from app.interaction_logic import InteractionScorer, score_interaction, update_interaction_confidence
 from app.tracking import CentroidTracker, Track, TrackPoint, classify_motion, compress_states_to_ranges
-from app.utils import Detection, bbox_iou, expand_box
+from app.utils import Detection, bbox_iou, detect_installation_objects, expand_box
 
 
 def test_basic_geometry_helpers():
     assert round(bbox_iou((0, 0, 10, 10), (5, 5, 15, 15)), 3) == 0.143
     assert expand_box((0, 0, 10, 10), 2.0, 100, 100) == (0, 0, 15, 15)
+
+
+def test_installation_fallback_finds_cable_shape():
+    import cv2
+    import numpy as np
+
+    frame = np.full((240, 320, 3), 245, dtype=np.uint8)
+    cv2.line(frame, (35, 160), (285, 78), (20, 20, 20), 7)
+
+    detections = detect_installation_objects(frame, frame_num=12)
+
+    assert any(det.class_name == "cable" for det in detections)
+
+
+def test_installation_fallback_skips_existing_yolo_box():
+    import cv2
+    import numpy as np
+
+    frame = np.full((180, 260, 3), 245, dtype=np.uint8)
+    cv2.rectangle(frame, (70, 60), (150, 120), (30, 30, 30), -1)
+    existing = [Detection(0, "tv", 0.8, (60, 50, 160, 130), (110, 90))]
+
+    detections = detect_installation_objects(frame, frame_num=0, existing=existing)
+
+    assert detections == []
 
 
 def test_tracker_keeps_same_id_for_nearby_box():
