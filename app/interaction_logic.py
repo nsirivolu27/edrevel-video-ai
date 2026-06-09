@@ -27,7 +27,7 @@ def interaction_zone(person_box, frame_width: int, frame_height: int):
     x1, y1, x2, y2 = person_box
     h = y2 - y1
     upper_body = (x1, y1, x2, y1 + h * 0.68)
-    return expand_box(upper_body, 1.35, frame_width, frame_height)
+    return expand_box(upper_body, 1.2, frame_width, frame_height)
 
 
 def score_interaction(
@@ -42,22 +42,22 @@ def score_interaction(
         1.0, (frame_width**2 + frame_height**2) ** 0.5
     )
     proximity = max(0.0, 1.0 - dist_norm * 9.0)
-    overlap = min(1.0, bbox_iou(obj.last.bbox, zone) * 3.5)
+    overlap = min(1.0, bbox_iou(obj.last.bbox, zone) * 4.0)
     broad_nearness = max(
         0.0,
         1.0 - normalized_distance(obj.last.center, person.last.center, frame_width, frame_height) * 4,
     )
 
     # Hardcoded on purpose for this prototype; these are the knobs I'd tune with videos.
-    bonus = 0.16 if just_started_moving else 0.0
-    return round(min(1.0, 0.42 * proximity + 0.33 * overlap + 0.15 * broad_nearness + bonus), 4)
+    bonus = 0.18 if just_started_moving else 0.0
+    return round(min(1.0, 0.45 * proximity + 0.40 * overlap + 0.05 * broad_nearness + bonus), 4)
 
 
 class InteractionScorer:
     def __init__(self, frame_width: int, frame_height: int) -> None:
         self.frame_width = frame_width
         self.frame_height = frame_height
-        self.threshold = 0.58
+        self.threshold = 0.52
         self.min_frames = 2
         self.pairs: dict[tuple[int, int], PairState] = {}
 

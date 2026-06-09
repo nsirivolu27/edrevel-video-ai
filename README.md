@@ -10,14 +10,20 @@ The current app is a FastAPI service that samples video frames, detects people a
 
 The first version used a base YOLO model, which worked for common COCO objects but missed domain-specific installation items like cables and small parts. The project is now moving from a general assessment prototype toward a more useful installation-video analysis tool.
 
-Recent work adds a lightweight OpenCV fallback for objects YOLO does not reliably label:
+The current design follows a **deconstruct and reason** approach. The vision pipeline should not send every frame or every visible edge downstream. Its job is to reduce a video into a small chronological evidence package that a later reasoning layer can compare with a task blueprint or SOP.
 
-- thin elongated shapes are proposed as `cable`
-- smaller non-COCO parts are proposed as `installation_object`
-- fallback detections are merged into the same tracking and interaction pipeline
-- duplicate fallback boxes are skipped when YOLO already found the object
+For the current spectrophotometer installation example, the important procedure targets are:
 
-This is not meant to replace a fine-tuned detector. It is a practical bridge while we collect better data and decide which installation-specific labels matter most.
+- `spectrophotometer`
+- `data_cable` / `cable`
+- `power_cable`
+- `power_supply`
+- `interface_port`
+- `connector`
+
+The scene can also contain context such as a `microscope`, `lab_bench`, and `test_tube_rack`. These objects are useful for scene understanding, but they are not treated as interaction targets for this procedure.
+
+YOLO-World provides open-vocabulary detection for procedure-specific labels. A small OpenCV cable fallback is still used when the model misses a thin cable shape. Persistent-track filtering, label normalization, duplicate removal, and per-class limits keep the evidence package from filling up with noisy fragments.
 
 ## What It Does
 
@@ -26,10 +32,11 @@ This is not meant to replace a fine-tuned detector. It is a practical bridge whi
 - Process every Nth frame while preserving original frame numbers
 - Detect people separately from candidate objects
 - Add installation-specific fallback detections for cables and parts
+- Normalize related open-vocabulary labels into stable output classes
 - Track people and objects with a custom centroid + IoU tracker
 - Classify object motion as moving or stationary over time
 - Estimate interaction windows using person proximity, object overlap, motion changes, and temporal confidence
-- Save annotated keyframes under `outputs/{task_id}/keyframes/`
+- Save sparse annotated evidence keyframes under `outputs/{task_id}/keyframes/`
 - Store task state and result paths in a local JSON file
 
 ## Project Layout
@@ -61,12 +68,13 @@ The structure is intentionally small. Most of the important logic lives in `vide
 2. Sample frames for speed.
 3. Run YOLO and split detections into people and candidate objects.
 4. Add OpenCV fallback detections for cable-like shapes and small installation parts.
-5. Track people and objects separately with a centroid + IoU matcher.
-6. Smooth object center movement and compress repeated states into frame ranges.
-7. Build an upper-body interaction zone for each person.
-8. Score nearby objects using distance, zone overlap, broad proximity, and recent motion changes.
-9. Smooth interaction confidence over time so one noisy frame does not create a false interaction.
-10. Export result JSON and annotated keyframes.
+5. Normalize label aliases and merge overlapping detections.
+6. Track people and objects separately with a centroid + IoU matcher.
+7. Discard short-lived tracks and keep the strongest persistent evidence per class.
+8. Build an upper-body interaction zone for each person.
+9. Score procedure targets using distance, zone overlap, and recent motion changes.
+10. Select spaced keyframes for interaction peaks, nearby motion transitions, and scene changes.
+11. Export chronological evidence JSON and annotated keyframes.
 
 ## Why the Custom Tracker?
 
@@ -194,6 +202,7 @@ See `sample_result.json` for a fuller example.
 
 - Base YOLO labels are limited for installation videos.
 - The OpenCV fallback helps with cables and small parts, but it can miss low-contrast or heavily occluded objects.
+- Open-vocabulary detections depend heavily on the class prompts supplied with each task.
 - Frame sampling improves speed but can miss very short interactions.
 - The tracker is intentionally simple and may swap IDs when objects overlap heavily.
 - The interaction zone is not true hand-contact detection.
@@ -202,6 +211,7 @@ See `sample_result.json` for a fuller example.
 ## Roadmap
 
 - Collect and label installation-specific video frames.
+- Add a task-blueprint registry that supplies target labels, context labels, and ordered SOP steps per procedure.
 - Fine-tune YOLO on labels like `cable`, `connector`, `panel`, `bracket`, and common tools.
 - Compare the current tracker with ByteTrack or DeepSORT.
 - Add hand-pose or wrist/keypoint signals for better interaction timing.
@@ -211,4 +221,4 @@ See `sample_result.json` for a fuller example.
 
 ## Project Status
 
-This is an active internship project. The assessment version established the baseline service, and the current work is focused on making the detector more useful for real installation footage.
+This is an active internship project. The assessment version established the baseline service. Current work is focused on turning raw installation footage into sparse, chronological evidence that can support later SOP verification and multimodal reasoning.

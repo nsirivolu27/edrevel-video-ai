@@ -158,9 +158,6 @@ def detect_installation_objects(
         label, confidence = _classify_contour(contour, bbox, width, height)
         if not label:
             continue
-        if label == "installation_object" and area_ratio > 0.09:
-            continue
-
         proposals.append(
             Detection(
                 frame=frame_num,
@@ -171,8 +168,8 @@ def detect_installation_objects(
             )
         )
 
-    # Keep this useful instead of flooding the tracker with background texture.
-    return sorted(proposals, key=lambda det: det.confidence, reverse=True)[:12]
+    # A few strong cable proposals are more useful than dozens of edge fragments.
+    return sorted(proposals, key=lambda det: det.confidence, reverse=True)[:3]
 
 
 def _classify_contour(contour, bbox: BBox, frame_width: int, frame_height: int):
@@ -184,9 +181,6 @@ def _classify_contour(contour, bbox: BBox, frame_width: int, frame_height: int):
     if box_w <= 0 or box_h <= 0:
         return None, 0.0
 
-    long_side = max(box_w, box_h)
-    short_side = max(1.0, min(box_w, box_h))
-    aspect = long_side / short_side
     contour_length = cv2.arcLength(contour, closed=False)
     diag = max(1.0, (frame_width**2 + frame_height**2) ** 0.5)
 
@@ -194,15 +188,10 @@ def _classify_contour(contour, bbox: BBox, frame_width: int, frame_height: int):
     rw, rh = rotated[1]
     rotated_aspect = max(rw, rh) / max(1.0, min(rw, rh))
 
-    if rotated_aspect >= 4.0 and contour_length / diag > 0.035:
+    extent = cv2.contourArea(contour) / max(1.0, box_w * box_h)
+    if rotated_aspect >= 5.0 and extent <= 0.22 and contour_length / diag > 0.06:
         confidence = min(0.78, 0.42 + min(rotated_aspect, 18) / 26 + contour_length / diag)
         return "cable", round(confidence, 3)
-
-    # A softer bucket for brackets, connectors, plates, and small parts.
-    extent = cv2.contourArea(contour) / max(1.0, box_w * box_h)
-    if 0.22 <= extent <= 0.92 and 0.0006 <= (box_w * box_h) / max(1, frame_width * frame_height) <= 0.035:
-        confidence = min(0.62, 0.31 + extent * 0.25 + min(aspect, 3.0) * 0.03)
-        return "installation_object", round(confidence, 3)
 
     return None, 0.0
 
@@ -226,3 +215,41 @@ def _pad_box(box: BBox, pad: int, frame_width: int, frame_height: int) -> BBox:
         min(float(frame_width), x2 + pad),
         min(float(frame_height), y2 + pad),
     )
+
+
+def canonical_class_name(class_name: str) -> str:
+    name = class_name.strip().lower().replace("-", " ").replace("_", " ")
+    aliases = {
+        "scientist": "person",
+        "technician": "person",
+        "lab technician": "person",
+        "wire": "cable",
+        "cord": "cable",
+        "power cord": "power_cable",
+        "power cable": "power_cable",
+        "data cable": "data_cable",
+        "fiber optic cable": "data_cable",
+        "fibre optic cable": "data_cable",
+        "power adapter": "power_supply",
+        "power brick": "power_supply",
+        "front interface port": "interface_port",
+        "front panel port": "interface_port",
+        "laboratory instrument": "spectrophotometer",
+        "cary 60": "spectrophotometer",
+        "workbench": "lab_bench",
+        "laboratory bench": "lab_bench",
+    }
+    return aliases.get(name, name.replace(" ", "_"))
+
+
+def merge_overlapping_detections(detections: list[Detection], iou_threshold: float = 0.45) -> list[Detection]:
+    kept: list[Detection] = []
+    for detection in sorted(detections, key=lambda item: item.confidence, reverse=True):
+        duplicate = any(
+            detection.class_name == current.class_name
+            and bbox_iou(detection.bbox, current.bbox) >= iou_threshold
+            for current in kept
+        )
+        if not duplicate:
+            kept.append(detection)
+    return kept

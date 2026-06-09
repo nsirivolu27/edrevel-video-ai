@@ -52,8 +52,10 @@ class CentroidTracker:
                     track.last.center, det.center, self.frame_width, self.frame_height
                 )
                 # A mixed score is easier to explain than a black-box tracker.
-                score = 0.65 * iou + 0.35 * max(0.0, 1.0 - dist * 6.0)
-                if score >= 0.22:
+                is_cable = "cable" in track.class_name
+                distance_score = max(0.0, 1.0 - dist * (3.5 if is_cable else 6.0))
+                score = (0.45 * iou + 0.55 * distance_score) if is_cable else (0.65 * iou + 0.35 * distance_score)
+                if score >= (0.16 if is_cable else 0.22):
                     scored_matches.append((score, track_id, det_idx))
 
         for _, track_id, det_idx in sorted(scored_matches, reverse=True):

@@ -1,6 +1,13 @@
 from app.interaction_logic import InteractionScorer, score_interaction, update_interaction_confidence
 from app.tracking import CentroidTracker, Track, TrackPoint, classify_motion, compress_states_to_ranges
-from app.utils import Detection, bbox_iou, detect_installation_objects, expand_box
+from app.utils import (
+    Detection,
+    bbox_iou,
+    canonical_class_name,
+    detect_installation_objects,
+    expand_box,
+    merge_overlapping_detections,
+)
 
 
 def test_basic_geometry_helpers():
@@ -31,6 +38,24 @@ def test_installation_fallback_skips_existing_yolo_box():
     detections = detect_installation_objects(frame, frame_num=0, existing=existing)
 
     assert detections == []
+
+
+def test_domain_labels_are_canonicalized():
+    assert canonical_class_name("fiber optic cable") == "data_cable"
+    assert canonical_class_name("power brick") == "power_supply"
+    assert canonical_class_name("Cary 60") == "spectrophotometer"
+
+
+def test_duplicate_open_vocab_detections_are_merged():
+    detections = [
+        Detection(0, "data_cable", 0.8, (10, 10, 100, 40), (55, 25)),
+        Detection(0, "data_cable", 0.5, (12, 11, 102, 41), (57, 26)),
+    ]
+
+    merged = merge_overlapping_detections(detections)
+
+    assert len(merged) == 1
+    assert merged[0].confidence == 0.8
 
 
 def test_tracker_keeps_same_id_for_nearby_box():
