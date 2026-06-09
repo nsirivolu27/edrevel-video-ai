@@ -7,3 +7,5 @@ uploads/
 data/
 *.pyc
 yolov8*.pt
+
+.venv/
