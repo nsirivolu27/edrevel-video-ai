@@ -12,7 +12,7 @@ UPLOAD_DIR = Path("uploads")
 OUTPUT_DIR = Path("outputs")
 YOLO_MODEL = "yolov8s-world.pt"  # open-vocab variant; plain yolov8n only knew the 80 COCO labels, which miss cables/lab gear
 SAMPLE_EVERY = 5
-MIN_CONFIDENCE = 0.25
+MIN_CONFIDENCE = 0.05
 MIN_BOX_AREA_RATIO = 0.0007
 MAX_KEYFRAMES = 20
 

@@ -15,7 +15,12 @@ def init_db() -> None:
         DB_PATH.write_text("[]", encoding="utf-8")
 
 
-def create_task(task_id: str, filename: str, video_path: str) -> Task:
+def create_task(
+    task_id: str,
+    filename: str,
+    video_path: str,
+    classes: list[str] | None = None,
+) -> Task:
     task = Task(
         task_id=task_id,
         filename=filename,
@@ -23,6 +28,7 @@ def create_task(task_id: str, filename: str, video_path: str) -> Task:
         status=TaskStatus.queued,
         created_at=now_utc(),
         updated_at=now_utc(),
+        classes=classes,  # optional override; None lets the pipeline fall back to DEFAULT_CLASSES
     )
     with _lock:
         tasks = _read()
