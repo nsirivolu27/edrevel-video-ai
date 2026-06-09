@@ -20,6 +20,7 @@ class Task:
     updated_at: datetime
     error: str | None = None
     result_path: str | None = None
+    classes: list[str] | None = None  # per-upload detection vocabulary; None means the pipeline falls back to DEFAULT_CLASSES
 
     def to_dict(self) -> dict:
         data = asdict(self)
