@@ -10,18 +10,29 @@ from app.utils import Detection, bbox_center, draw_tracks, probe_video
 
 UPLOAD_DIR = Path("uploads")
 OUTPUT_DIR = Path("outputs")
-YOLO_MODEL = "yolov8n.pt"
+YOLO_MODEL = "yolov8s-world.pt"  # open-vocab variant; plain yolov8n only knew the 80 COCO labels, which miss cables/lab gear
 SAMPLE_EVERY = 5
 MIN_CONFIDENCE = 0.25
 MIN_BOX_AREA_RATIO = 0.0007
 MAX_KEYFRAMES = 20
 
+# COCO never contained install/lab items (cables, spectrophotometers, etc.), so we hand
+# yolo-world an explicit vocabulary instead of trusting its built-in class list. An upload
+# can override this per task (see process_task); this is just the sensible fallback.
+DEFAULT_CLASSES = [
+    "person",  # required - detect_frame splits people out using this exact label
+    "cable", "wire", "power cord",
+    "spectrophotometer", "monitor", "keyboard",
+    "drill", "screwdriver", "wrench",
+    "box", "bottle",
+]
+
 
 @cache
 def yolo_model():
-    from ultralytics import YOLO
+    from ultralytics import YOLOWorld
 
-    return YOLO(YOLO_MODEL)
+    return YOLOWorld(YOLO_MODEL)
 
 
 def process_task(task_id: str) -> None:
@@ -32,7 +43,9 @@ def process_task(task_id: str) -> None:
     print(f"[task {task_id}] processing {task.filename}")
     database.update_task(task_id, TaskStatus.processing)
     try:
-        result_path = process_video(task_id, task.filename, task.video_path)
+        # classes is optional and may be absent on older task records, so default it safely
+        classes = getattr(task, "classes", None)
+        result_path = process_video(task_id, task.filename, task.video_path, classes)
         database.update_task(task_id, TaskStatus.completed, result_path=str(result_path))
         print(f"[task {task_id}] done")
     except Exception as exc:
@@ -66,13 +79,21 @@ def detect_frame(frame, frame_num: int) -> tuple[list[Detection], list[Detection
     return people, objects
 
 
-def process_video(task_id: str, filename: str, video_path: str) -> Path:
+def process_video(task_id: str, filename: str, video_path: str, classes: list[str] | None = None) -> Path:
     import cv2
 
     info = probe_video(video_path)
     out_dir = OUTPUT_DIR / task_id
     keyframe_dir = out_dir / "keyframes"
     keyframe_dir.mkdir(parents=True, exist_ok=True)
+
+    # Set the detection vocabulary for this video before reading any frames. yolo_model() is a
+    # single cached instance, so we set classes per task here rather than per frame. Fine for the
+    # local/sequential processing here; would need one model per worker if we ran tasks in parallel.
+    detection_classes = list(classes or DEFAULT_CLASSES)
+    if "person" not in detection_classes:
+        detection_classes.append("person")  # keep it in or the people/objects split below goes empty
+    yolo_model().set_classes(detection_classes)
 
     object_tracker = CentroidTracker(info.width, info.height)
     person_tracker = CentroidTracker(info.width, info.height)

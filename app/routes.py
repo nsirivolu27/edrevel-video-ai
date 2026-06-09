@@ -2,9 +2,9 @@ import json
 import shutil
 import uuid
 from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
-
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from app import database
 from app.video_pipeline import UPLOAD_DIR, OUTPUT_DIR, process_task
 
@@ -27,18 +27,22 @@ def debug_paths():
 
 
 @router.post("/tasks/upload")
-def upload_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+def upload_video(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    classes: Optional[str] = Form(None),
+):
     database.init_db()
     task_id = str(uuid.uuid4())
     safe_name = Path(file.filename or "video.mp4").name
     task_dir = UPLOAD_DIR / task_id
     task_dir.mkdir(parents=True, exist_ok=True)
     video_path = task_dir / safe_name
-
     with video_path.open("wb") as out:
         shutil.copyfileobj(file.file, out)
-
-    task = database.create_task(task_id, safe_name, str(video_path))
+    # optional per-upload vocabulary; comma-separated string -> list. blank falls back to DEFAULT_CLASSES downstream
+    class_list = [c.strip() for c in classes.split(",") if c.strip()] if classes else None
+    task = database.create_task(task_id, safe_name, str(video_path), class_list)
     background_tasks.add_task(process_task, task_id)
     return {"task_id": task.task_id, "status": task.status}
 

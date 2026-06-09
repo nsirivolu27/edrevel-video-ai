@@ -39,6 +39,7 @@ class Task:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             error=data.get("error"),
             result_path=data.get("result_path"),
+            classes=data.get("classes"),  # optional; older saved tasks won't have it, hence .get
         )
 
 
